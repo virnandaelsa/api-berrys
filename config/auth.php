@@ -43,7 +43,7 @@ return [
 
         'sanctum' => [
             'driver' => 'sanctum',
-            'provider' => 'users',
+            'provider' => 'owner',
         ],
 
         'owner' => [
@@ -81,12 +81,12 @@ return [
             'model' => App\Models\User::class, // Model untuk User (Owner web)
         ],
 
-        'owners' => [
+        'owner' => [
             'driver' => 'eloquent',
             'model' => App\Models\Owner::class, // Model untuk Owner
         ],
 
-        'karyawans' => [
+        'karyawan' => [
             'driver' => 'eloquent',
             'model' => App\Models\Karyawan::class, // Model untuk Karyawan
         ],

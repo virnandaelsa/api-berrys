@@ -507,29 +507,21 @@ public function laporanMingguanKaryawan(Request $request)
     // Ambil id_jadwal berdasarkan id_karyawan dan tanggal
     $jadwal = Jadwal::where('id_karyawan', $validated['id_karyawan'])
         ->whereBetween('date', [$validated['start_date'], $validated['end_date']])
-        ->first();
+        ->get();
 
-    if (!$jadwal) {
+    if ($jadwal->isEmpty()) {
         return response()->json([
             'status' => 'error',
             'message' => 'Jadwal tidak ditemukan untuk karyawan dalam rentang tanggal tersebut.'
         ], 404);
     }
 
+    // Akses id jadwal dari koleksi, dan ambil id_jadwal yang digunakan untuk query selanjutnya
+    $jadwalIds = $jadwal->pluck('id'); // Ambil semua id dari koleksi jadwal
+
     // Ambil data dalam rentang minggu berdasarkan id_jadwal
-    $laporanAwal = LaporanDatang::where('id_jadwal', $jadwal->id)
-        ->whereBetween('tanggal', [$validated['start_date'], $validated['end_date']])
-        ->get();
 
-    $stokDatang = StokDatang::where('id_jadwal', $jadwal->id)
-        ->whereBetween('tanggal', [$validated['start_date'], $validated['end_date']])
-        ->get();
-
-    $laporanAkhir = Laporan::where('id_jadwal', $jadwal->id)
-        ->whereBetween('tanggal', [$validated['start_date'], $validated['end_date']])
-        ->get();
-
-    $pendapatan = Pendapatan::where('id_jadwal', $jadwal->id)
+    $pendapatan = Pendapatan::whereIn('id_jadwal', $jadwalIds)
         ->whereBetween('tanggal', [$validated['start_date'], $validated['end_date']])
         ->get()
         ->map(function ($item) {
@@ -541,13 +533,11 @@ public function laporanMingguanKaryawan(Request $request)
         'status' => 'success',
         'message' => 'Laporan mingguan berhasil diambil.',
         'data' => [
-            'laporan_awal' => $laporanAwal,
-            'stok_datang' => $stokDatang,
-            'laporan_akhir' => $laporanAkhir,
             'pendapatan' => $pendapatan,
         ],
     ]);
 }
+
 
 }
 

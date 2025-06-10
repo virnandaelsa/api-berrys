@@ -8,6 +8,7 @@ use App\Models\Jadwal;
 use App\Models\Karyawan;
 use App\Models\Pendapatan;
 use App\Models\Penggajian;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 
 class DashboardController extends Controller
@@ -116,4 +117,57 @@ class DashboardController extends Controller
             ], 500);
         }
     }
+
+    public function DashKaryawan(Request $request)
+    {
+        // Log the incoming request for debugging purposes
+        \Log::info("Fetching dashboard data for Karyawan");
+
+        // Get id_karyawan from request (can be a query parameter or part of the body)
+        $id_karyawan = $request->input('id_karyawan'); // Assuming the ID comes from the request
+
+        // Check if id_karyawan is provided
+        if (!$id_karyawan) {
+            \Log::error("Karyawan ID not provided");
+            return response()->json(['message' => 'Karyawan ID not provided'], 400);
+        }
+
+        // Fetch karyawan data using where
+        $karyawan = Karyawan::where('id', $id_karyawan)->first();
+
+        if (!$karyawan) {
+            \Log::error("Karyawan not found with ID: {$id_karyawan}");
+            return response()->json(['message' => 'Karyawan not found'], 404);
+        }
+
+        // Get today's date
+        $today = Carbon::now()->toDateString();
+
+        // Fetch jadwal for today
+        $jadwal = Jadwal::where('id_karyawan', $id_karyawan)
+                        ->where('date', $today)
+                        ->first();
+
+        // Log the fetched data for debugging purposes
+        \Log::info("Fetched Karyawan data: ", ['karyawan' => $karyawan]);
+        \Log::info("Fetched Jadwal data for today: ", ['jadwal' => $jadwal]);
+
+        // Prepare response data in the format expected by Android app
+        $response = [
+            'status' => 'success',
+            'dashboard_for' => 'karyawan',
+            'absensi' => [], // Assuming you will fill this later if required
+            'jadwal' => $jadwal ? [$jadwal] : [], // Wrap jadwal in an array
+            'karyawan' => [
+                'id' => $karyawan->id,
+                'nama' => $karyawan->nama,
+                'tempat_kerja' => $karyawan->tempat_kerja,
+                'role' => $karyawan->role,
+            ]
+        ];
+
+        // Return the response as JSON
+        return response()->json($response);
+    }
+
 }

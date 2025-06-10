@@ -29,6 +29,7 @@ class JadwalController extends Controller
         $jadwals = Jadwal::join('karyawan', 'jadwal.id_karyawan', '=', 'karyawan.id')
             ->whereBetween('date', [$tanggal_mulai, $tanggal_akhir])
             ->select('jadwal.*', 'karyawan.nama as nama_karyawan')
+            ->orderByRaw("FIELD(hari, 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu')")
             ->get();
 
         return response()->json(['data' => $jadwals], 200);

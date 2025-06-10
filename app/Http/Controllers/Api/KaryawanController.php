@@ -14,10 +14,15 @@ class KaryawanController extends Controller
     public function index()
     {
         $karyawans = Karyawan::get();
-        if($karyawans){
+
+        // Log query untuk memeriksa apakah data karyawan diambil
+        \Log::info('Fetching karyawan data:', ['total_karyawan' => $karyawans->count()]);
+
+        if ($karyawans->isNotEmpty()) {
+            \Log::info('Karyawan data found:', ['karyawan' => $karyawans]);
             return KaryawanResource::collection($karyawans);
-        }
-        else{
+        } else {
+            \Log::warning('No karyawan data found');
             return response()->json($karyawans, 200); // Return all karyawan as JSON
         }
     }
@@ -25,17 +30,24 @@ class KaryawanController extends Controller
     // Store a newly created karyawan in storage.
     public function store(Request $request)
     {
-        $validator = Validator::make($request->all(),[
-            'nik' => 'required|unique:karyawan,nik',
+        $validator = Validator::make($request->all(), [
+            'nik' => 'required|digits:16|unique:karyawan,nik',
             'nama' => 'required',
             'alamat' => 'required',
             'tanggal_lahir' => 'required|date',
             'jen_kel' => 'required|in:P,L',
+            'no_tlp' => 'required|min:11',
             'role' => 'required',
             'tanggal_masuk' => 'required|date',
             'username' => 'required|unique:karyawan,username',
-            'password' => 'required|min:6',
+            'password' => 'required|min:8',
+        ], [
+            'nik.unique' => 'NIK sudah digunakan, silakan masukkan NIK lain.',
+            'nik.min' => 'NIK minimal 16 karakter.',
+            'no_tlp.min' => 'No Telepon minimal 11 karakter.',
+            'password.min' => 'Password minimal 8 karakter.',
         ]);
+
         if($validator->fails()){
             return response()->json([
                 'message' => 'All fields are mandetory',
@@ -49,6 +61,7 @@ class KaryawanController extends Controller
             'alamat' => $request->alamat,
             'tanggal_lahir' => $request->tanggal_lahir,
             'jen_kel' => $request->jen_kel,
+            'no_tlp' => $request->no_tlp,
             'role' => $request->role,
             'tanggal_masuk' => $request->tanggal_masuk,
             'username' => $request->username,
@@ -64,6 +77,7 @@ class KaryawanController extends Controller
     // Show the specified karyawan.
     public function show(Karyawan $karyawan)
     {
+        \Log::info('Show method called for karyawan with ID: ');
         return response()->json([
             'data' => new KaryawanResource($karyawan)
         ]);
@@ -78,11 +92,12 @@ class KaryawanController extends Controller
         'alamat' => 'sometimes|required',
         'tanggal_lahir' => 'sometimes|date',
         'jen_kel' => 'sometimes|in:P,L',
+        'no_tlp' => 'sometimes|required',
         'role' => 'sometimes|string',
         'tanggal_masuk' => 'sometimes|date',
         'status' => 'sometimes|in:Aktif,Tidak Aktif',
         'username' => 'sometimes|string|unique:karyawan,username,' . $karyawan->id,
-        'password' => 'sometimes|string|min:6', // Tambahkan validasi password jika ada
+        'password' => 'sometimes|string|min:8',
     ]);
 
     if ($validator->fails()) {
@@ -99,6 +114,7 @@ class KaryawanController extends Controller
         'alamat' => $request->get('alamat', $karyawan->alamat),
         'tanggal_lahir' => $request->get('tanggal_lahir', $karyawan->tanggal_lahir),
         'jen_kel' => $request->get('jen_kel', $karyawan->jen_kel),
+        'no_tlp' => $request->get('no_tlp', $karyawan->no_tlp),
         'role' => $request->get('role', $karyawan->role),
         'tanggal_masuk' => $request->get('tanggal_masuk', $karyawan->tanggal_masuk),
         'status' => $request->get('status', $karyawan->status),

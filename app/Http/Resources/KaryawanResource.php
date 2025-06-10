@@ -21,6 +21,7 @@ class KaryawanResource extends JsonResource
             'alamat' => $this->alamat,
             'tanggal_lahir' => $this->tanggal_lahir,
             'jen_kel' => $this->jen_kel,
+            'no_tlp' =>$this->no_tlp,
             'role' => $this->role,
             'tanggal_masuk' => $this->tanggal_masuk,
             'status' => $this->status,

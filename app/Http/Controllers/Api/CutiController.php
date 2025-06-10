@@ -16,19 +16,48 @@ class CutiController extends Controller
      * Display a listing of the resource.
      */
     public function index(Request $request)
-    {
-        $tanggal_mulai = $request->query('tanggal_mulai')
-            ? Carbon::parse($request->query('tanggal_mulai'))->startOfWeek(Carbon::MONDAY)->toDateString()
-            : now()->startOfWeek(Carbon::MONDAY)->toDateString();
+{
+    // Mendapatkan tanggal mulai dari query parameter atau default ke minggu ini
+    $tanggal_mulai = $request->query('tanggal_mulai')
+        ? Carbon::parse($request->query('tanggal_mulai'))->startOfWeek(Carbon::MONDAY)->toDateString()
+        : now()->startOfWeek(Carbon::MONDAY)->toDateString();
 
-        $tanggal_akhir = Carbon::parse($tanggal_mulai)->addDays(6)->toDateString();
+    // Menghitung tanggal akhir (6 hari setelah tanggal mulai)
+    $tanggal_akhir = Carbon::parse($tanggal_mulai)->addDays(6)->toDateString();
 
-        $cutis = Cuti::join('karyawan', 'cuti.id_karyawan', '=', 'karyawan.id')
-            ->select('cuti.*', 'karyawan.nama as nama_karyawan')
-            ->whereBetween('tanggal', [$tanggal_mulai, $tanggal_akhir])
-            ->get();
+    // Log tanggal mulai dan tanggal akhir
+    \Log::info("API menerima filter dari tanggal mulai: $tanggal_mulai sampai tanggal akhir: $tanggal_akhir");
 
-        return response()->json(['data' => $cutis], 200);
+    // Menjalankan query untuk mengambil data cuti yang ada dalam rentang tanggal yang sudah ditentukan
+    $cutis = Cuti::join('karyawan', 'cuti.id_karyawan', '=', 'karyawan.id')
+        ->select('cuti.*', 'karyawan.nama as nama_karyawan')
+        ->whereBetween('tanggal', [$tanggal_mulai, $tanggal_akhir])
+        ->get();
+
+    // Log hasil query cuti (untuk debugging atau monitoring)
+    \Log::info("Data cuti yang ditemukan: ", ['cutis' => $cutis]);
+
+    // Mengembalikan response JSON dengan data cuti
+    return response()->json(['data' => $cutis], 200);
+}
+
+// Controller method untuk mengambil data cuti dalam 1 bulan
+    public function getCutiByMonth(Request $request) {
+        $bulan = $request->query('bulan');
+        $tahun = $request->query('tahun');
+
+        \Log::info("Bulan: $bulan, Tahun: $tahun");
+
+        // Ambil data cuti dalam rentang tanggal tersebut
+        $cutis = Cuti::whereMonth('tanggal', $bulan)
+                ->whereYear('tanggal', $tahun)
+                ->get();
+
+        \Log::info("Data cuti yang ditemukan: " . $cutis);
+
+        return response()->json([
+            'data' => $cutis
+        ]);
     }
 
     /**

@@ -19,6 +19,7 @@ class Karyawan extends Authenticatable
         'alamat',
         'tanggal_lahir',
         'jen_kel',
+        'no_tlp',
         'role',
         'tanggal_masuk',
         'status',

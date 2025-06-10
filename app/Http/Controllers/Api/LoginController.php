@@ -12,36 +12,36 @@ use Illuminate\Support\Facades\Log; // Pastikan Log facade diimport
 class LoginController extends Controller
 {
     public function login(Request $request)
-{
-    // Validasi input
-    $request->validate([
-        'username' => ['required', 'string'],
-        'password' => ['required'],
-    ]);
+    {
+        // Validasi input
+        $request->validate([
+            'username' => ['required', 'string'],
+            'password' => ['required'],
+        ]);
 
-    Log::info('Login attempt for Owner', ['username' => $request->username]); // Log untuk mencoba login
+        Log::info('Login attempt for Owner', ['username' => $request->username]); // Log untuk mencoba login
 
-    $owner = Owner::where('username', $request->username)->first();
+        $owner = Owner::where('username', $request->username)->first();
 
-    if (!$owner || !Hash::check($request->password, $owner->password)) {
-        Log::warning('Login failed for Owner', ['username' => $request->username]); // Log untuk gagal login
-        return response()->json(['message' => 'Username atau password salah'], 401);
+        if (!$owner || !Hash::check($request->password, $owner->password)) {
+            Log::warning('Login failed for Owner', ['username' => $request->username]); // Log untuk gagal login
+            return response()->json(['message' => 'Username atau password salah'], 401);
+        }
+
+        Log::info('Login successful for Owner', ['username' => $request->username, 'owner_id' => $owner->id]); // Log untuk login berhasil
+
+        // Membuat token
+        $token = $owner->createToken('owner-token')->plainTextToken;
+
+        // Log token creation
+        Log::info('Token created for Owner', ['owner_id' => $owner->id, 'token' => $token]); // Log untuk token yang dibuat
+
+        return response()->json([
+            'access_token' => $token,
+            'token_type' => 'Bearer',
+            'user' => $owner
+        ]);
     }
-
-    Log::info('Login successful for Owner', ['username' => $request->username, 'owner_id' => $owner->id]); // Log untuk login berhasil
-
-    // Membuat token
-    $token = $owner->createToken('owner-token')->plainTextToken;
-
-    // Log token creation
-    Log::info('Token created for Owner', ['owner_id' => $owner->id, 'token' => $token]); // Log untuk token yang dibuat
-
-    return response()->json([
-        'access_token' => $token,
-        'token_type' => 'Bearer',
-        'user' => $owner
-    ]);
-}
 
     public function logout(Request $request)
     {
