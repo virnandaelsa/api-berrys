@@ -12,20 +12,21 @@ class KaryawanController extends Controller
 {
     // Display a listing of the karyawan.
     public function index()
-    {
-        $karyawans = Karyawan::get();
+{
+    // Mengambil data karyawan dan mengurutkan berdasarkan tanggal_masuk
+    $karyawans = Karyawan::orderBy('tanggal_masuk', 'asc')->get();
 
-        // Log query untuk memeriksa apakah data karyawan diambil
-        \Log::info('Fetching karyawan data:', ['total_karyawan' => $karyawans->count()]);
+    // Log query untuk memeriksa apakah data karyawan diambil
+    \Log::info('Fetching karyawan data:', ['total_karyawan' => $karyawans->count()]);
 
-        if ($karyawans->isNotEmpty()) {
-            \Log::info('Karyawan data found:', ['karyawan' => $karyawans]);
-            return KaryawanResource::collection($karyawans);
-        } else {
-            \Log::warning('No karyawan data found');
-            return response()->json($karyawans, 200); // Return all karyawan as JSON
-        }
+    if ($karyawans->isNotEmpty()) {
+        \Log::info('Karyawan data found:', ['karyawan' => $karyawans]);
+        return KaryawanResource::collection($karyawans);
+    } else {
+        \Log::warning('No karyawan data found');
+        return response()->json($karyawans, 200); // Return all karyawan as JSON
     }
+}
 
     // Store a newly created karyawan in storage.
     public function store(Request $request)

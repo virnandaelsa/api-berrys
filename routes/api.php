@@ -30,7 +30,7 @@ Route::middleware("auth:karyawan")->group(function(){
     Route::get('jadwal/karyawan', [jadwalController::class, 'index']);
 
     Route::get('/penggajian/karyawan/{id}', [PenggajianController::class, 'showByKaryawan']);
-    Route::post('/penggajian/edit-gaji', [PenggajianController::class, 'tambahEditGaji']);
+    Route::post('/penggajian/simpan-harian/{id}', [PenggajianController::class, 'simpanGajiHarian']);
 
     Route::get('/lihat/karyawan/{karyawan}', [KaryawanController::class, 'show']);
     Route::put('/edit/karyawan/{karyawan}', [KaryawanController::class, 'update']);
@@ -73,8 +73,8 @@ Route::middleware("auth:owner")->group(function(){
 
     Route::get('/penggajian', [PenggajianController::class, 'index']);
     Route::get('/penggajian/{id}', [PenggajianController::class, 'showByKaryawan']);
-    Route::post('/penggajian/simpan-harian/{id}', [PenggajianController::class, 'simpanGajiHarian']);
     Route::get('karyawan/{id_karyawan}/month-year', [PenggajianController::class, 'getByMonthYear']);
+    Route::post('/penggajian/edit-gaji', [PenggajianController::class, 'tambahEditGaji']);
 
     Route::get('/laporan/datang', [LaporanDatangController::class, 'lihatLaporanDatang']);
     Route::get('/stok/datang', [LaporanDatangController::class, 'lihatStokDatang']);

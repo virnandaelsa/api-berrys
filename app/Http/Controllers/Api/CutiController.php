@@ -30,9 +30,10 @@ class CutiController extends Controller
 
     // Menjalankan query untuk mengambil data cuti yang ada dalam rentang tanggal yang sudah ditentukan
     $cutis = Cuti::join('karyawan', 'cuti.id_karyawan', '=', 'karyawan.id')
-        ->select('cuti.*', 'karyawan.nama as nama_karyawan')
-        ->whereBetween('tanggal', [$tanggal_mulai, $tanggal_akhir])
-        ->get();
+    ->select('cuti.*', 'karyawan.nama as nama_karyawan')
+    ->whereBetween('tanggal', [$tanggal_mulai, $tanggal_akhir])
+    ->orderBy('tanggal', 'asc') // urut berdasarkan tanggal naik (paling awal dulu)
+    ->get();
 
     // Log hasil query cuti (untuk debugging atau monitoring)
     \Log::info("Data cuti yang ditemukan: ", ['cutis' => $cutis]);
@@ -43,22 +44,23 @@ class CutiController extends Controller
 
 // Controller method untuk mengambil data cuti dalam 1 bulan
     public function getCutiByMonth(Request $request) {
-        $bulan = $request->query('bulan');
-        $tahun = $request->query('tahun');
+    $bulan = $request->query('bulan');
+    $tahun = $request->query('tahun');
 
-        \Log::info("Bulan: $bulan, Tahun: $tahun");
+    \Log::info("Bulan: $bulan, Tahun: $tahun");
 
-        // Ambil data cuti dalam rentang tanggal tersebut
-        $cutis = Cuti::whereMonth('tanggal', $bulan)
-                ->whereYear('tanggal', $tahun)
-                ->get();
+    // Ambil data cuti dalam rentang tanggal tersebut dan urutkan berdasarkan tanggal
+    $cutis = Cuti::whereMonth('tanggal', $bulan)
+            ->whereYear('tanggal', $tahun)
+            ->orderBy('tanggal', 'asc') // tambahkan baris ini untuk urut tanggal naik
+            ->get();
 
-        \Log::info("Data cuti yang ditemukan: " . $cutis);
+    \Log::info("Data cuti yang ditemukan: " . $cutis);
 
-        return response()->json([
-            'data' => $cutis
-        ]);
-    }
+    return response()->json([
+        'data' => $cutis
+    ]);
+}
 
     /**
      * Store a newly created resource in storage.

@@ -8,6 +8,7 @@ use App\Models\Jadwal;
 use App\Models\Karyawan;
 use App\Models\Pendapatan;
 use App\Models\Penggajian;
+use App\Models\RekapGajiBulanan;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
@@ -26,8 +27,8 @@ class DashboardController extends Controller
         $tahun = $request->query('tahun', now()->format('Y'));
         \Log::info("Menghitung total penggajian untuk Bulan: {$bulan}, Tahun: {$tahun}");
 
-        $totalGaji = Penggajian::whereMonth('tanggal', $bulan)
-            ->whereYear('tanggal', $tahun)
+        $totalGaji = RekapGajiBulanan::where('bulan', $bulan)
+            ->where('tahun', $tahun)
             ->sum('total_gaji');
 
         // Hitung jumlah karyawan masuk berdasarkan jadwal hari ini (distinct berdasarkan id_karyawan)
