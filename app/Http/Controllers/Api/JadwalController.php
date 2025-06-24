@@ -35,6 +35,27 @@ class JadwalController extends Controller
         return response()->json(['data' => $jadwals], 200);
     }
 
+    public function cariByTempatTanggal(Request $request)
+{
+    $tempat = $request->query('tempat');
+    $tanggal = $request->query('date');
+
+    // Validasi sederhana
+    if (!$tempat || !$tanggal) {
+        return response()->json([
+            'message' => 'tempat dan date wajib diisi'
+        ], 400);
+    }
+
+    $jadwals = Jadwal::join('karyawan', 'jadwal.id_karyawan', '=', 'karyawan.id')
+        ->where('jadwal.tempat', $tempat)
+        ->where('jadwal.date', $tanggal)
+        ->select('jadwal.*', 'karyawan.nama as nama_karyawan')
+        ->get();
+
+    return response()->json(['data' => $jadwals], 200);
+}
+
     /**
      * Store a newly created resource in storage.
      */
@@ -116,53 +137,96 @@ class JadwalController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request)
+   public function update(Request $request)
 {
-    \Log::info("Memulai proses update jadwal.");
+    \Log::info("Mulai proses update jadwal.");
 
     // Validasi input
+    \Log::info("Validasi input request jadwal.");
     $validator = Validator::make($request->all(), [
-        'tanggal_mulai' => 'required|date',
         'jadwal' => 'required|array',
+        'jadwal.*.action' => 'required|string|in:insert,delete,update',
         'jadwal.*.tempat' => 'required|string',
         'jadwal.*.shift' => 'required|string',
         'jadwal.*.hari' => 'required|string|in:Senin,Selasa,Rabu,Kamis,Jumat,Sabtu,Minggu',
         'jadwal.*.date' => 'required|date',
-        'jadwal.*.id_karyawan' => 'nullable',
+        // insert & delete pakai id_karyawan, update pakai id_karyawan_lama & id_karyawan_baru
+        'jadwal.*.id_karyawan' => 'required_if:jadwal.*.action,insert,delete|integer',
+        'jadwal.*.id_karyawan_lama' => 'required_if:jadwal.*.action,update|integer',
+        'jadwal.*.id_karyawan_baru' => 'required_if:jadwal.*.action,update|integer|different:jadwal.*.id_karyawan_lama',
     ]);
-
     if ($validator->fails()) {
+        \Log::warning("Validasi gagal pada input jadwal.", ['errors' => $validator->messages()]);
         return response()->json([
             'message' => 'Validasi gagal',
             'errors' => $validator->messages(),
         ], 422);
     }
 
-    // Tentukan rentang tanggal satu minggu
-    $tanggal_mulai = Carbon::parse($request->tanggal_mulai)->startOfWeek(Carbon::MONDAY)->toDateString();
-    $tanggal_akhir = Carbon::parse($tanggal_mulai)->addDays(6)->toDateString();
+    $jadwals = $request->jadwal;
+    \Log::info("Proses update dimulai untuk " . count($jadwals) . " data jadwal.");
 
-    // HAPUS SEMUA JADWAL pada rentang tanggal tersebut
-    Jadwal::whereBetween('date', [$tanggal_mulai, $tanggal_akhir])->delete();
+    $inserted = 0;
+    $deleted = 0;
+    $updated = 0;
 
-    // Masukkan data baru
-    foreach ($request->jadwal as $data) {
-        $idKaryawanList = is_array($data['id_karyawan']) ? $data['id_karyawan'] : [$data['id_karyawan']];
-        foreach ($idKaryawanList as $idKaryawan) {
-            if (is_null($idKaryawan)) continue;
-            Jadwal::create([
+    foreach ($jadwals as $index => $data) {
+        if ($data['action'] === 'insert') {
+            $exists = \App\Models\Jadwal::where([
+                'date' => $data['date'],
                 'tempat' => $data['tempat'],
                 'shift' => $data['shift'],
                 'hari' => $data['hari'],
+                'id_karyawan' => $data['id_karyawan'],
+            ])->first();
+            if (!$exists) {
+                \App\Models\Jadwal::create([
+                    'date' => $data['date'],
+                    'tempat' => $data['tempat'],
+                    'shift' => $data['shift'],
+                    'hari' => $data['hari'],
+                    'id_karyawan' => $data['id_karyawan'],
+                    // tambahkan kolom lain jika ada
+                ]);
+                $inserted++;
+                \Log::info("Insert jadwal: " . json_encode($data));
+            }
+        } elseif ($data['action'] === 'delete') {
+            \App\Models\Jadwal::where([
                 'date' => $data['date'],
-                'id_karyawan' => $idKaryawan,
-            ]);
+                'tempat' => $data['tempat'],
+                'shift' => $data['shift'],
+                'hari' => $data['hari'],
+                'id_karyawan' => $data['id_karyawan'],
+            ])->delete();
+            $deleted++;
+            \Log::info("Delete jadwal: " . json_encode($data));
+        } elseif ($data['action'] === 'update') {
+            $jadwal = \App\Models\Jadwal::where([
+                'date' => $data['date'],
+                'tempat' => $data['tempat'],
+                'shift' => $data['shift'],
+                'hari' => $data['hari'],
+                'id_karyawan' => $data['id_karyawan_lama'],
+            ])->first();
+            if ($jadwal) {
+                $jadwal->update([
+                    'id_karyawan' => $data['id_karyawan_baru']
+                ]);
+                $updated++;
+                \Log::info("Update jadwal: " . json_encode($data));
+            }
         }
     }
 
-    return response()->json(['message' => 'Jadwal berhasil diperbarui'], 200);
+    \Log::info("Proses update jadwal selesai. Inserted: $inserted, Deleted: $deleted, Updated: $updated");
+    return response()->json([
+        'message' => "Jadwal berhasil diupdate.",
+        'inserted' => $inserted,
+        'deleted' => $deleted,
+        'updated' => $updated
+    ], 200);
 }
-
     /**
      * Remove the specified resource from storage.
      */

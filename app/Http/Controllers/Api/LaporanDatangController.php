@@ -17,7 +17,75 @@ class LaporanDatangController extends Controller
         \Log::info('Masuk ke metode laporan_datang');
         \Log::info('Data yang diterima:', $request->all());
 
-        // Validasi input
+        // Validasi input dasar
+        try {
+            $validated = $request->validate([
+                'id_jadwal' => 'required|integer',
+                'tanggal' => 'required|date',
+            ]);
+            \Log::info('Validasi dasar berhasil:', $validated);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            \Log::error('Validasi dasar gagal:', $e->errors());
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Validasi gagal',
+                'errors' => $e->errors(),
+            ], 422);
+        }
+
+        // Cari jadwal
+        $jadwal = Jadwal::find($validated['id_jadwal']);
+        if (!$jadwal) {
+            return response()->json(['status'=>'error','message'=>'Jadwal tidak ditemukan'], 404);
+        }
+
+        // Otomatis untuk shift 2
+        if ($jadwal->shift == 2) {
+            // Cari jadwal shift 1 pada tanggal yang sama
+            $jadwalShift1 = Jadwal::where('date', $validated['tanggal'])
+                ->where('shift', 1)
+                ->first();
+
+            if (!$jadwalShift1) {
+                return response()->json([
+                    'status'=>'error',
+                    'message'=>'Data jadwal shift 1 pada tanggal ini belum tersedia'
+                ], 404);
+            }
+
+            // Ambil data laporan pulang shift 1 (stok akhir)
+            $laporanPulangShift1 = Laporan::where('id_jadwal', $jadwalShift1->id)
+                ->where('tanggal', $validated['tanggal'])
+                ->first();
+
+            if (!$laporanPulangShift1) {
+                return response()->json([
+                    'status'=>'error',
+                    'message'=>'Laporan pulang shift 1 pada tanggal ini belum diinput'
+                ], 404);
+            }
+
+            // Salin stok akhir shift 1 ke laporan datang shift 2
+            $newData = [
+                'id_jadwal'    => $jadwal->id,
+                'tanggal'      => $validated['tanggal'],
+                'donat_bombo'  => $laporanPulangShift1->stok_bomboloni ?? 0,
+                'donat_bolong' => $laporanPulangShift1->stok_bolong ?? 0,
+                'donat_salju'  => $laporanPulangShift1->stok_salju ?? 0,
+                'kelengkapan'  => $laporanPulangShift1->kelengkapan,
+                'catatan'      => $laporanPulangShift1->catatan,
+            ];
+
+            $laporanDatang2 = LaporanDatang::create($newData);
+
+            return response()->json([
+                'status'=>'success',
+                'message'=>'Data laporan datang shift 2 berhasil diisi otomatis dari laporan pulang shift 1',
+                'data'=>$laporanDatang2
+            ]);
+        }
+
+        // Jika shift 1, validasi field input manual
         try {
             $validated = $request->validate([
                 'id_jadwal' => 'required|integer',
@@ -28,9 +96,9 @@ class LaporanDatangController extends Controller
                 'kelengkapan' => 'string|nullable',
                 'catatan' => 'string|nullable',
             ]);
-            \Log::info('Validasi berhasil:', $validated);
+            \Log::info('Validasi shift 1 berhasil:', $validated);
         } catch (\Illuminate\Validation\ValidationException $e) {
-            \Log::error('Validasi gagal:', $e->errors());
+            \Log::error('Validasi shift 1 gagal:', $e->errors());
             return response()->json([
                 'status' => 'error',
                 'message' => 'Validasi gagal',
@@ -38,13 +106,13 @@ class LaporanDatangController extends Controller
             ], 422);
         }
 
-        // Simpan data
-        LaporanDatang::create($validated);
-        \Log::info('Data berhasil disimpan ke database.');
+        $laporan = LaporanDatang::create($validated);
+        \Log::info('Data shift 1 berhasil disimpan ke database.');
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Data laporan berhasil disimpan!',
+            'message' => 'Data laporan datang shift 1 berhasil disimpan!',
+            'data' => $laporan
         ]);
     }
 
@@ -312,6 +380,52 @@ public function lihatLaporanPulang(Request $request)
         return response()->json([
             'status' => 'error',
             'message' => 'Terjadi error saat memproses permintaan.',
+        ], 500);
+    }
+}
+
+public function lihatLaporanPulangSingle(Request $request)
+{
+    \Log::info('Masuk ke metode lihatLaporanPulangSingle');
+    \Log::info('Data yang diterima:', $request->all());
+
+    try {
+        // Validasi input
+        $validated = $request->validate([
+            'tanggal' => 'required|date',
+            'id_jadwal' => 'required|integer',
+        ]);
+        \Log::info('Validasi berhasil:', $validated);
+
+        // Ambil satu laporan pulang berdasarkan tanggal dan id_jadwal
+        $laporanPulang = Laporan::where('tanggal', $validated['tanggal'])
+            ->where('id_jadwal', $validated['id_jadwal'])
+            ->first();
+
+        \Log::info('Hasil kueri laporanPulang:', $laporanPulang ? $laporanPulang->toArray() : null);
+
+        // Periksa apakah data ditemukan
+        if (!$laporanPulang) {
+            \Log::info('Laporan pulang tidak ditemukan.');
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Laporan pulang tidak ditemukan.',
+                'data' => null,
+            ], 404);
+        }
+
+        // Kembalikan data (sebagai object, bukan array)
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Laporan pulang berhasil diambil.',
+            'data' => $laporanPulang,
+        ]);
+    } catch (\Exception $e) {
+        \Log::error('Terjadi error di metode lihatLaporanPulangSingle:', ['error' => $e->getMessage()]);
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Terjadi error saat memproses permintaan.',
+            'data' => null,
         ], 500);
     }
 }

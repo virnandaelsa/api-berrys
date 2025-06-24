@@ -73,6 +73,7 @@ class AbsensiController extends Controller
              'id_karyawan' => $request->id_karyawan,
              'id_jadwal' => $request->id_jadwal,
              'photo' => $request->file('photo') ? $request->file('photo')->store('uploads', 'public') : null,
+             'facePhoto' => $request->file('facePhoto') ? $request->file('facePhoto')->store('uploads', 'public') : null,
          ]);
 
          // Hitung jumlah absensi setelah menyimpan absen baru

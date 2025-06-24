@@ -75,6 +75,8 @@ class LoginController extends Controller
 
         $token = $karyawan->createToken('karyawan-token')->plainTextToken;
 
+        Log::info('Token created for Karyawan', ['karyawan-token' => $karyawan->id, 'token' => $token]);
+
         return response()->json([
             'access_token' => $token,
             'token_type' => 'Bearer',
